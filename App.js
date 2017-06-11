@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View,TextInput,Button } from 'react-native';
+import { StyleSheet, Text, View,TextInput,Button,Alert } from 'react-native';
 import { Router, Scene } from 'react-native-router-flux';
 import { Actions } from 'react-native-router-flux';
 import axios from 'axios';
@@ -8,7 +8,8 @@ class Home extends React.Component {
   constructor(props) {
     super(props);
     this.state = { user_name: '',
-                    password:''};
+                    password:'',
+                  my_user:''};
   }
   login(){
 
@@ -19,8 +20,23 @@ class Home extends React.Component {
       password: this.state.password
     })
     .then(response=> {
-      console.log(this.state.user_name)
-      Actions.users({user: name})
+      console.log(response.data)
+      if('error' in response.data){
+        console.log("NAME TAKEN")
+        Alert.alert(
+          'Name Taken',
+          'Choose Another Name',
+          [
+            {text: 'OK', onPress: () => console.log('OK Pressed')}
+          ],
+          { cancelable: false }
+        )
+      }
+      else{
+        this.setState({my_user: response.data})
+        Actions.users({my_user: response.data})
+      }
+
     })
     .catch(function (error) {
 
@@ -64,13 +80,10 @@ class Convo extends React.Component {
   componentWillMount(){
   }
   sendMessage(){
-    axios.post('http://localhost:7000/users', {
-      user_name: name,
-      password: this.state.password
+    axios.post('', {
     })
     .then(response=> {
       console.log(this.state.user_name)
-      Actions.users({user: name})
     })
     .catch(function (error) {
 
@@ -79,16 +92,8 @@ class Convo extends React.Component {
   render() {
     return (
       <View style={styles.container}>
-        <Text>Logged in as {this.props.user}</Text>
-        <Text>Recipient: {this.props.recipient}</Text>
-        {users.map(user=>
-          <Text key={user}>{user}</Text>)}
-        <Text>Recipient</Text>
-          <TextInput
-            style={{height: 40, borderColor: 'gray', borderWidth: 1}}
-            onChangeText={(recipient) => this.setState({recipient})}
-            value={this.state.recipient}
-          />
+        <Text>Logged in as {this.props.my_user.user_name}</Text>
+        <Text>Sending message to {this.props.recipient.user_name}</Text>
         <Text>Message</Text>
           <TextInput
             style={{height: 40, borderColor: 'gray', borderWidth: 1}}
@@ -111,7 +116,8 @@ class Users extends React.Component {
     this.state = {
       message: '',
       recipient:'',
-      users:[]
+      users:[],
+      updated: false
     };
   }
   componentWillMount(){
@@ -125,22 +131,33 @@ class Users extends React.Component {
       // }
       var temp_users=[]
       for (var i=0;i<res.data.length-1;i++){
-        console.log(arr[i])
-        temp_users.push(arr[i].user_name)
+        temp_users.push(arr[i])
       }
       this.setState({users:temp_users})
+      this.setState({updated: true})
     });
   }
   render() {
     var users=this.state.users
-    return (
-      <View style={styles.container}>
-        <Text>Logged in as {this.props.user}</Text>
-        <Text>Available Users</Text>
-        {users.map(user=>
-          <Text key={user}>{user}</Text>)}
-      </View>
-    );
+    var updated=this.state.updated
+    if(!updated){
+      return(
+        <View style={styles.container}>
+          <Text>Logged in as {this.props.my_user.user_name}</Text>
+          <Text>No Users Available to Chat</Text>
+        </View>
+      );
+    }
+    else{
+      return (
+        <View style={styles.container}>
+          <Text>Logged in as {this.props.my_user.user_name}</Text>
+          <Text>Available Users</Text>
+          {users.map(user=>
+            <Text onPress={()=>Actions.convo({recipient: user,my_user: this.props.my_user})} key={user.user_name}>{user.user_name} {user._id}</Text>)}
+        </View>
+      );
+    }
   }
 }
 export default class App extends React.Component {
