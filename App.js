@@ -11,9 +11,8 @@ class Home extends React.Component {
                     password:'',
                   my_user:''};
   }
+
   login(){
-
-
     var name= this.state.user_name
     axios.post('http://localhost:7000/users', {
       user_name: name,
@@ -42,6 +41,7 @@ class Home extends React.Component {
 
     });
   }
+
   render() {
     return (
       <View style={styles.container}>
@@ -74,26 +74,69 @@ class Convo extends React.Component {
     this.state = {
       message: '',
       recipient:'',
-
+      convoid:'',
+      messages:[]
     };
   }
+
   componentWillMount(){
+    axios.get(`http://localhost:7000/conversation/`+this.props.my_user._id+'&'+this.props.recipient._id)
+    .then(response => {
+      if('error' in response.data){
+        console.log("no convo creating new")
+        axios.post('http://localhost:7000/new_conversation/', {
+          users:[
+            this.props.my_user._id,
+            this.props.recipient._id
+          ],
+          messages:[
+
+          ]
+        })
+        .then(response=> {
+          console.log(response.data._id)
+          console.log("finished posting")
+          this.setState({convoid: response.data._id})
+        })
+        .catch(function (error) {
+          console.log(error)
+        });
+      }
+      else{
+        this.setState({convoid: response.data._id})
+        this.setState({messages: response.data.messages})
+        console.log(this.state.convoid)
+      }
+    });
   }
+
   sendMessage(){
-    axios.post('', {
-    })
+    var messageStore=this.state.messages
+    var d= new Date();
+    var jsonbody={
+      fromid: this.props.my_user._id,
+      message_content: this.state.message,
+      time_stamp: d.toLocaleString()
+    }
+    axios.post('http://localhost:7000/new_message/'+this.state.convoid, jsonbody)
     .then(response=> {
-      console.log(this.state.user_name)
+      messageStore.push(jsonbody)
+      this.setState({messages: messageStore})
     })
     .catch(function (error) {
 
     });
   }
   render() {
+    var messages = this.state.messages
     return (
       <View style={styles.container}>
         <Text>Logged in as {this.props.my_user.user_name}</Text>
         <Text>Sending message to {this.props.recipient.user_name}</Text>
+        <Text>Convo ID {this.state.convoid}</Text>
+        <Text>Messages:</Text>
+          {messages.map(message=>
+            <Text key={message.time_stamp}>{message.fromid} said: {message.message_content} </Text>)}
         <Text>Message</Text>
           <TextInput
             style={{height: 40, borderColor: 'gray', borderWidth: 1}}
